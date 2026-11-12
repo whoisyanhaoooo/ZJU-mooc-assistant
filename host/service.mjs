@@ -19,7 +19,7 @@ import {
 
 const STATE_VERSION = 1
 // 可分发副本的版本标记：写进 runtime.json / snapshot，安装后能确认加载的是哪一份
-const PLUGIN_VERSION = '0.2.3'
+const PLUGIN_VERSION = '0.2.4'
 const CATEGORY_URL = 'https://www.icourse163.org/category/all'
 const LOG_LIMIT = 200
 const TASK_LOG_LIMIT = 60
@@ -490,13 +490,24 @@ export class MoocCompanion {
       }
       if (!this.page) return 0
     }
-    const alive = await this.page.eval('1').then(() => true).catch(() => false)
-    if (!alive) { this.page = null; return 0 }
+    const targets = new Set()
     try {
-      const paused = await mooc.pauseVideoPlayback(this.page)
-      if (paused > 0) this.log(`已暂停后台视频播放（${paused} 个）`)
-      return paused
-    } catch { return 0 }
+      if (this.browser) {
+        const pages = await this.browser.listPages()
+        for (const info of pages) {
+          if (!/icourse163\.org/.test(info.url || '')) continue
+          const target = await this.browser.pageFor(info.url).catch(() => null)
+          if (target) targets.add(target)
+        }
+      }
+    } catch { /* ignore */ }
+    if (this.page) targets.add(this.page)
+    let paused = 0
+    for (const page of targets) {
+      try { paused += await mooc.pauseVideoPlayback(page) } catch { /* ignore */ }
+    }
+    if (paused > 0) this.log(`已暂停后台视频播放（${paused} 个）`)
+    return paused
   }
 
   outlineNeedsDiscussionRefresh(outline) {
