@@ -797,6 +797,7 @@ window.__ModuleLoader__.load({
       // 设置里的自定义下拉：{ top,left,width, options,value,onPick }；null = 收起
       const [optionMenu, setOptionMenu] = React.useState(null)
       const pageRef = React.useRef(null)
+      const lastActiveChapter = React.useRef('')
       const [settingsOpen, setSettingsOpen] = React.useState(false)
       const [paramsOpen, setParamsOpen] = React.useState(false)
 
@@ -849,8 +850,17 @@ window.__ModuleLoader__.load({
         const timer = setTimeout(() => setNotice(''), 5000)
         return () => clearTimeout(timer)
       }, [notice])
-      // 换课程后回到「只展开第一周」
+      // 换课程后先回到默认展开（第一周）；有运行任务时下面的 effect 会自动展开任务所在周
       React.useEffect(() => { setOpenChapter(undefined) }, [data?.selectedCourseId])
+      // 正在执行/排队的任务换到另一周时，只自动展开那一周；用户手动切换后不会被每 1.5 秒的轮询打断
+      React.useEffect(() => {
+        const active = (data?.tasks || []).find(task => task.status === 'running' || task.status === 'queued')
+        if (!active) { lastActiveChapter.current = ''; return }
+        const chapterId = String(active.chapterId || `chapter-${active.chapterIndex ?? 0}`)
+        if (lastActiveChapter.current === chapterId) return
+        lastActiveChapter.current = chapterId
+        setOpenChapter(chapterId)
+      }, [data?.tasks])
       // 课程下拉浮层：点外面 / Esc / 滚动页面时收起（下拉内部滚动不算）
       React.useEffect(() => {
         if (!courseMenu) return undefined
@@ -1098,6 +1108,9 @@ window.__ModuleLoader__.load({
       const loginInfo = loginMeta(login)
       const selectedCourse = courses.find(course => course.id === data.selectedCourseId) || null
       const groups = chapterGroups(data)
+      // 有运行/排队任务时，只允许展开任务所在那一周
+      const activeTask = (data.tasks || []).find(task => task.status === 'running' || task.status === 'queued')
+      const activeChapterId = activeTask ? String(activeTask.chapterId || `chapter-${activeTask.chapterIndex ?? 0}`) : ''
 
       // ===== 头部 =====
       const header = h('header', { className: 'mcn-head' },
@@ -1283,7 +1296,9 @@ window.__ModuleLoader__.load({
 
       const chapterNodes = visibleGroups.map((group, index) => {
         // 一级菜单只展开一周：默认第一周，点其它周会切换过去，点已展开的这周会全部收起
-        const open = openChapter === undefined ? index === 0 : openChapter === group.id
+        const open = activeChapterId
+          ? group.id === activeChapterId
+          : (openChapter === undefined ? index === 0 : openChapter === group.id)
         const total = group.tasks.length
         const done = group.tasks.filter(task => task.status === 'done').length
         return h('div', { className: 'mcn-chapter', key: group.id || index },
