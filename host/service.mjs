@@ -19,7 +19,7 @@ import {
 
 const STATE_VERSION = 1
 // 可分发副本的版本标记：写进 runtime.json / snapshot，安装后能确认加载的是哪一份
-const PLUGIN_VERSION = '0.2.2'
+const PLUGIN_VERSION = '0.2.3'
 const CATEGORY_URL = 'https://www.icourse163.org/category/all'
 const LOG_LIMIT = 200
 const TASK_LOG_LIMIT = 60
@@ -464,7 +464,32 @@ export class MoocCompanion {
    */
   async stopBackgroundPlayback({ force = false } = {}) {
     if (!force && (this.current || this.queue.length)) return 0
-    if (!this.page) return 0
+    if (!this.page) {
+      // 插件重载后 this.page 可能为空，但端口上的浏览器还在放视频：只复用已存在的实例，不主动启动浏览器
+      const port = Number(this.settings.browserPort) || 9233
+      try {
+        await fetch(`http://127.0.0.1:${port}/json/version`, { signal: AbortSignal.timeout(1_200) })
+      } catch {
+        return 0
+      }
+      if (!this.browser) {
+        this.browser = new Browser({
+          port,
+          appId: APP_ID,
+          dataDir: browserDir(),
+          browserPath: cleanString(this.settings.browserPath, 600),
+          headless: this.ensuredHeadless,
+          log: (...args) => this.log(args.join(' ')),
+        })
+      }
+      try {
+        await this.browser.ensureStarted()
+        this.page = await this.browser.pageFor('icourse163.org')
+      } catch {
+        return 0
+      }
+      if (!this.page) return 0
+    }
     const alive = await this.page.eval('1').then(() => true).catch(() => false)
     if (!alive) { this.page = null; return 0 }
     try {
