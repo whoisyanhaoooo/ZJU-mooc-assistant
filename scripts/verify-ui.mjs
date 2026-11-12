@@ -1,6 +1,6 @@
 // 迷你 React 渲染冒烟：用假 hooks 把 Page 真正调用一遍，检查：
 // 1) 各栏目有收起/展开按钮；2) 章节任务有「课程与筛选」二级折叠；
-// 3) 章节是一级菜单，一次只展开一周（点第二周，第一周自动收起）。
+// 3) 章节是一级菜单，一次只展开一周；有运行任务时锁定在任务所在周。
 import fs from 'node:fs'
 import vm from 'node:vm'
 
@@ -221,6 +221,7 @@ check('打开页面按钮圆角符合制作规范（9px，不是胶囊形）', /
 check('打开页面按钮高度与右侧小按钮一致（26px）', /\.mcn-pill-action[^}]*height:\s*26px/.test(source))
 check('章节头是一级折叠菜单', chapterHeads.length >= 2)
 check('默认只展开第一周', chapterHeads[0]?.props?.['aria-expanded'] === 'true' && chapterHeads[1]?.props?.['aria-expanded'] === 'false')
+check('运行/排队任务所在周会自动展开', source.includes("task.status === 'running' || task.status === 'queued'") && source.includes('lastActiveChapter.current = chapterId'))
 
 // 点课程下拉：应出现浮层菜单，列出全部课程，当前课程带对勾
 if (triggers[0]?.props?.onClick) {
@@ -275,7 +276,7 @@ check('点计划时间出现日历浮层', [...planClasses].some(name => name.in
 check('日历带星期表头', planTexts.includes('一') && planTexts.includes('日'))
 check('浮层里有小时/分钟滚轮', [...planClasses].some(name => name.includes('mcn-wheel-item')))
 
-// 点第二周：应切换成只展开第二周
+// 有任务正在执行时点第二周：仍只展开任务所在的那一周，不应被手动切走
 const heads2 = []
 walk(treePlan, node => { if (String(node.props?.className || '').includes('mcn-chapter-head')) heads2.push(node) })
 const second = heads2[1]
@@ -286,8 +287,7 @@ hookIndex = 0
 const tree2 = expand(PageComponent({}))
 const heads3 = []
 walk(tree2, node => { if (String(node.props?.className || '').includes('mcn-chapter-head')) heads3.push(node) })
-check('点第二周后第一周收起', heads3[0]?.props?.['aria-expanded'] === 'false')
-check('点第二周后第二周展开', heads3[1]?.props?.['aria-expanded'] === 'true')
+check('任务运行时点击其它周不会切走', heads3[0]?.props?.['aria-expanded'] === 'true' && heads3[1]?.props?.['aria-expanded'] === 'false')
 
 
 let failed = 0
