@@ -65,7 +65,7 @@ pnpm add link:<插件目录>
 
 ```bash
 cd <DSH_HOME>/profiles/desktop
-pnpm add file:<插件目录>/dist/ZJU-mooc-assistant-0.2.0.tgz
+pnpm add file:<插件目录>/dist/ZJU-mooc-assistant-0.2.1.tgz
 ```
 
 安装或启用后，刷新 DSH 页面，左侧栏出现「ZJU-mooc-assistant」即可。
