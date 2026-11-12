@@ -187,6 +187,7 @@ try {
   const serviceSource = fs.readFileSync(path.join(import.meta.dirname, '..', 'host', 'service.mjs'), 'utf8')
   check('生成讨论任务要求 hasDiscussion=true', serviceSource.includes("kind === 'video' && unit.hasDiscussion === true"))
   check('需要操作的任务可以打开页面', serviceSource.includes("case 'openTaskPage'") && serviceSource.includes('actionOpenTaskPage'))
+  check('没有任务时会暂停后台视频', moocSource.includes('pauseVideoPlayback') && serviceSource.includes('stopBackgroundPlayback') && serviceSource.includes('playbackTimer'))
   check('打开任务页前会切到可见浏览器', serviceSource.includes('ensureVisibleBrowser'))
   const cdpSource = fs.readFileSync(path.join(import.meta.dirname, '..', 'host', 'cdp.mjs'), 'utf8')
   check('可以主动关闭后台无头实例', cdpSource.includes('async shutdown()'))
