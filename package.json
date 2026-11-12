@@ -1,0 +1,64 @@
+{
+  "name": "ZJU-mooc-assistant",
+  "version": "0.2.0",
+  "description": "ZJU-mooc-assistant（可分发副本）：打开中国大学 MOOC（icourse163），登录后按章节上课、做测验与作业、参加考试、在讨论区提出自己的疑问，执行时实时显示进度。",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "host",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "INSTALL.md",
+    "docs",
+    "LICENSE"
+  ],
+  "license": "GPL-3.0-only",
+  "engines": {
+    "node": ">=24",
+    "dsh": ">=0.2.1-rc.3 <0.3.0"
+  },
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-workspace",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-plugin-manager"
+      ]
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/whoisyanhaoooo/ZJU-mooc-assistant.git"
+  },
+  "homepage": "https://github.com/whoisyanhaoooo/ZJU-mooc-assistant",
+  "bugs": {
+    "url": "https://github.com/whoisyanhaoooo/ZJU-mooc-assistant/issues"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "zju",
+    "mooc",
+    "icourse163",
+    "education"
+  ]
+}
