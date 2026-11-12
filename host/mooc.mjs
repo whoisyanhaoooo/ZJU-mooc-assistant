@@ -287,6 +287,34 @@ async function frameRun(page, frame, body) {
   return frameEval(page, frame, `(() => { ${DOM_HELPERS}\n${body}\n})()`)
 }
 
+/**
+ * 暂停当前页面（含 iframe）里所有正在播放的音视频。
+ * 插件在没有任务时调用，避免 Edge 后台继续播放课程视频、系统媒体控件一直亮着。
+ */
+export async function pauseVideoPlayback(page) {
+  const body = `
+    let count = 0;
+    for (const media of document.querySelectorAll('video, audio')) {
+      try {
+        if (!media.paused) { media.pause(); count += 1; }
+        media.muted = true;
+      } catch (error) {}
+    }
+    try {
+      if (navigator.mediaSession && navigator.mediaSession.playbackState === 'playing') {
+        navigator.mediaSession.playbackState = 'paused';
+      }
+    } catch (error) {}
+    return count;
+  `
+  let count = 0
+  try { count += Number(await run(page, body)) || 0 } catch { /* ignore */ }
+  for (const frame of (await listFrames(page)).filter(frame => frame.depth >= 1)) {
+    try { count += Number(await frameRun(page, frame, body)) || 0 } catch { /* ignore */ }
+  }
+  return count
+}
+
 /** 主框架里每个 iframe 的位置/尺寸，用来判断「哪个登录 tab 真的显示着」。 */
 const IFRAME_INFO_BODY = `
   return Array.from(document.querySelectorAll('iframe')).map((el, index) => {
