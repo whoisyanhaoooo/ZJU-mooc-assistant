@@ -19,7 +19,7 @@ import {
 
 const STATE_VERSION = 1
 // 可分发副本的版本标记：写进 runtime.json / snapshot，安装后能确认加载的是哪一份
-const PLUGIN_VERSION = '0.2.0'
+const PLUGIN_VERSION = '0.2.1'
 const CATEGORY_URL = 'https://www.icourse163.org/category/all'
 const LOG_LIMIT = 200
 const TASK_LOG_LIMIT = 60
@@ -371,6 +371,9 @@ export class MoocCompanion {
     // 计划截止时间：到点的任务自动按顺序进执行队列（每 20 秒检查一次）
     this.schedulerTimer = setInterval(() => { void this.pumpScheduled() }, 20_000)
     this.schedulerTimer.unref?.()
+    // 没有任务时，后台浏览器不应该继续播放视频（否则 Edge 的系统媒体控件会一直亮着）
+    this.playbackTimer = setInterval(() => { void this.stopBackgroundPlayback() }, 8_000)
+    this.playbackTimer.unref?.()
     this.log('ZJU-mooc-assistant已启动')
     // 上一次插件重启时如果还停在「等待滑块/验证」，那只是内存里的轮询；开机时不能假装还在等。
     if (this.state.login?.status === 'pending') {
@@ -455,6 +458,22 @@ export class MoocCompanion {
     }
   }
 
+  /**
+   * 暂停当前页面里的音视频。
+   * 默认只在「没有当前任务、队列为空」时执行；任务结束的收尾会 force=true 再清一次。
+   */
+  async stopBackgroundPlayback({ force = false } = {}) {
+    if (!force && (this.current || this.queue.length)) return 0
+    if (!this.page) return 0
+    const alive = await this.page.eval('1').then(() => true).catch(() => false)
+    if (!alive) { this.page = null; return 0 }
+    try {
+      const paused = await mooc.pauseVideoPlayback(this.page)
+      if (paused > 0) this.log(`已暂停后台视频播放（${paused} 个）`)
+      return paused
+    } catch { return 0 }
+  }
+
   outlineNeedsDiscussionRefresh(outline) {
     if (!outline || !Array.isArray(outline.chapters)) return false
     // 旧版大纲没有讨论标记版本：强制重读一次，把「课件」页里的讨论单元补进来
@@ -486,6 +505,8 @@ export class MoocCompanion {
     this.timer = undefined
     if (this.schedulerTimer) clearInterval(this.schedulerTimer)
     this.schedulerTimer = undefined
+    if (this.playbackTimer) clearInterval(this.playbackTimer)
+    this.playbackTimer = undefined
     try { this.currentAbort?.abort() } catch { /* ignore */ }
     try { this.loginWatcher?.abort() } catch { /* ignore */ }
     if (typeof this.apiDispose === 'function') { try { this.apiDispose() } catch { /* ignore */ } }
@@ -1281,6 +1302,8 @@ export class MoocCompanion {
           this.current = null
           this.currentAbort = null
           this.saveState(true)
+          // 任务结束（包括失败/取消）先把旧视频暂停，避免浏览器后台继续播放
+          await this.stopBackgroundPlayback({ force: true }).catch(() => {})
           // 任务结束后马上看下一个到点的计划任务
           void this.pumpScheduled()
         }
