@@ -1306,7 +1306,7 @@ window.__ModuleLoader__.load({
             type: 'button', className: 'mcn-chapter-head',
             'aria-expanded': open ? 'true' : 'false',
             title: open ? '收起这一周' : '展开这一周（其它周会自动收起）',
-            onClick: () => setOpenChapter(open ? '' : group.id),
+            onClick: () => { if (activeChapterId) return; setOpenChapter(open ? '' : group.id); },
           },
             h(ChevronIcon, { up: open, size: 13 }),
             h('span', { className: 'mcn-chapter-title' }, group.title),
