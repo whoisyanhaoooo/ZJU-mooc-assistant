@@ -19,7 +19,7 @@ import {
 
 const STATE_VERSION = 1
 // 可分发副本的版本标记：写进 runtime.json / snapshot，安装后能确认加载的是哪一份
-const PLUGIN_VERSION = '0.2.1'
+const PLUGIN_VERSION = '0.2.2'
 const CATEGORY_URL = 'https://www.icourse163.org/category/all'
 const LOG_LIMIT = 200
 const TASK_LOG_LIMIT = 60
